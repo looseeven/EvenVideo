@@ -3,6 +3,8 @@ package com.even.video;
 import java.io.File;
 import java.util.Locale;
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
@@ -14,6 +16,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.Display;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
@@ -59,6 +62,8 @@ SurfaceHolder.Callback
 	private static final int SHOW_PROGRESS = 0x01;
 	private static final int GONE_PLAYUI = 0x02;
 	private static final int VISIBLE_PLAYUI = 0x03;
+
+	private int mCurrentPos;  //播放的位置
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
 	 */
@@ -74,6 +79,7 @@ SurfaceHolder.Callback
 					if (isPlaying()) {
 						int duration = mMediaPlayer.getDuration();  //视频长度
 						int position = mMediaPlayer.getCurrentPosition(); //当前播放位置
+						mCurrentPos = mMediaPlayer.getCurrentPosition();
 						if(duration < 0) {
 							duration = 0;
 						}
@@ -152,7 +158,9 @@ SurfaceHolder.Callback
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
+		setContentView(R.layout.video);
+		if (savedInstanceState != null) 
+			mCurrentPos = savedInstanceState.getInt("currentPos");
 		initView();
 		initData();
 	}
@@ -163,6 +171,9 @@ SurfaceHolder.Callback
 	private TextView mTotaltime; //总长度tx
 	private RelativeLayout mPlayui; //控制模块
 	private ImageView mCt; //大窗口
+	AudioManager mAudioManager = null;//音频管理器
+	private int mPhoneHeigth; //当前手机屏幕的高度
+	private int mPhoneWidth;//当前手机屏幕的宽度
 	private void initView() {
 		mVideoWidth = 0;
 		mVideoHeight = 0;
@@ -174,9 +185,13 @@ SurfaceHolder.Callback
 		mTotaltime = (TextView) findViewById(R.id.totaltime);
 		mPlayui = (RelativeLayout) findViewById(R.id.playui);
 		mCt = (ImageView) findViewById(R.id.ct);
+		mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 	}
 
 	private void initData() {
+		Display display = getWindowManager().getDefaultDisplay();
+		mPhoneHeigth = display.getHeight();
+		mPhoneWidth = display.getWidth();
 		File file = new File(path);
 		if (file.exists() && file.length() > 0) {
 			try {
@@ -208,6 +223,15 @@ SurfaceHolder.Callback
 				mPause();
 			}else{
 				mStart();
+			}
+			break;
+		case R.id.ct:
+			Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
+			int ori = mConfiguration.orientation; //获取屏幕方向
+			if (ori == mConfiguration.ORIENTATION_LANDSCAPE) {
+			    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制为竖屏
+			} else if (ori == mConfiguration.ORIENTATION_PORTRAIT) {
+			    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
 			}
 			break;
 		}
@@ -249,6 +273,7 @@ SurfaceHolder.Callback
 		mHandler.sendEmptyMessageDelayed(SHOW_PROGRESS, 250);
 		if (isInPlaybackState()) {
 			mMediaPlayer.start();
+			mSeekTo(mCurrentPos);
 			mMediaPlayerState = STATE_PLAYING;
 		}
 	}
@@ -314,6 +339,7 @@ SurfaceHolder.Callback
 	@Override
 	public void onPrepared(MediaPlayer mp) {
 		mMediaPlayerState = STATE_PREPARED;
+		mStart();
 	}
 
 	/*
@@ -330,6 +356,7 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void onCompletion(MediaPlayer mp) {
+		mStart();
 		mMediaPlayerState = STATE_PLAYBACK_COMPLETED;
 	}
 
@@ -360,6 +387,12 @@ SurfaceHolder.Callback
 		super.onDestroy();
 		mHandler.removeMessages(SHOW_PROGRESS);
 		Stop();
+	}
+
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		super.onSaveInstanceState(outState);
+		outState.putInt("currentPos", mCurrentPos);
 	}
 
 	private boolean isInPlaybackState() {
@@ -407,15 +440,6 @@ SurfaceHolder.Callback
 
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
-		/*
-		 * 底部控制栏的显示与隐藏逻辑
-		 */
-		if (mPlayui.getVisibility() != View.VISIBLE) { 
-			mHandler.sendEmptyMessage(VISIBLE_PLAYUI); 
-		}else{
-			mHandler.removeMessages(GONE_PLAYUI); 
-			mHandler.sendEmptyMessage(VISIBLE_PLAYUI);
-		}
 		return gd.onTouchEvent(event);
 	}
 
@@ -440,24 +464,29 @@ SurfaceHolder.Callback
 		@Override
 		public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX,
 				float velocityY) {
-			/*
-			 * 滑动
-			 */
 			float x = e2.getX() - e1.getX();
 			float y = e2.getY() - e1.getY();
-			if(x > 100) {
+			if(x > 300) { 
 				mFastforward();
 				return true;
-			} else if(x < -100) {
+			} else if(x < -300) {
 				mRewind();
 				return true;
 			}
-			Log.i("md", "y: "+y);
-			if(y > 100) {
-				mAddLightness();
+
+			if(y < -100) {
+				if (e1.getX()<(mPhoneWidth/2)) { //在做区域
+					mAddAudioVolume();
+				}else{
+					mAddLightness();
+				}
 				return true;
-			} else if(y < -100) {
-				mLessLightness();
+			} else if(y > 100) {
+				if (e1.getX()<(mPhoneWidth/2)) {
+					mLessAudioVolume();
+				}else{
+					mLessLightness();
+				}
 				return true;
 			}
 			return false;
@@ -465,9 +494,17 @@ SurfaceHolder.Callback
 
 		@Override
 		public boolean onDown(MotionEvent e) {
-			/*
-			 * 按下
-			 */
+			if ((e.getY() < mPhoneHeigth && e.getY() > mPhoneHeigth-250)||(e.getY() < 250 && e.getY() > 0)) { //判断是否在底部/顶部点击
+				/*
+				 * 底部控制栏的显示与隐藏逻辑
+				 */
+				if (mPlayui.getVisibility() != View.VISIBLE) { 
+					mHandler.sendEmptyMessage(VISIBLE_PLAYUI); 
+				}else{
+					mHandler.removeMessages(GONE_PLAYUI); 
+					mHandler.sendEmptyMessage(VISIBLE_PLAYUI);
+				}
+			}
 			return super.onDown(e);
 		}
 	});
@@ -515,4 +552,27 @@ SurfaceHolder.Callback
 			SetLightness(this,light);
 		}
 	}
+
+	/*
+	 * 增加音量
+	 */
+	private void mAddAudioVolume(){
+		mAudioManager.adjustStreamVolume(
+				AudioManager.STREAM_MUSIC, 
+				AudioManager.ADJUST_RAISE,
+				AudioManager.FX_FOCUS_NAVIGATION_UP
+				);
+	}
+
+	/*
+	 * 减小音量
+	 */
+	private void mLessAudioVolume(){
+		mAudioManager.adjustStreamVolume(
+				AudioManager.STREAM_MUSIC,
+				AudioManager.ADJUST_LOWER,
+				AudioManager.FLAG_SHOW_UI 
+				);
+	}
+
 }

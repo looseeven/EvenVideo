@@ -53,8 +53,6 @@ SurfaceHolder.Callback
 	 */
 	private int         mVideoWidth; 
 	private int         mVideoHeight;
-	private int         mSurfaceWidth;
-	private int         mSurfaceHeight;
 
 	private int mMediaPlayerState = STATE_IDLE;
 	private static final String TAG = AnimationUtil.class.getSimpleName();
@@ -134,6 +132,12 @@ SurfaceHolder.Callback
 					mPlayui.setAnimation(AnimationUtil.moveLocationToBottom());
 					mCt.setAnimation(AnimationUtil.moveLocationToTop());
 					mCt.setVisibility(View.GONE);
+					if (isLandScape) {
+						getWindow().setFlags(
+								WindowManager.LayoutParams.FLAG_FULLSCREEN, 
+								WindowManager.LayoutParams. FLAG_FULLSCREEN
+								);
+					}
 					break;
 				case VISIBLE_PLAYUI:
 					mHandler.sendEmptyMessageDelayed(GONE_PLAYUI,6000);
@@ -145,6 +149,7 @@ SurfaceHolder.Callback
 						mPlayui.setVisibility(View.VISIBLE);
 						mPlayui.setAnimation(AnimationUtil.moveBottomToLocation());
 					}
+					getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 					break;
 				}
 			} catch (Exception e) {
@@ -188,7 +193,15 @@ SurfaceHolder.Callback
 		mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 	}
 
+	private boolean isLandScape = false;
 	private void initData() {
+		Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
+		int ori = mConfiguration.orientation; //获取屏幕方向
+		if (ori == mConfiguration.ORIENTATION_LANDSCAPE) {
+			isLandScape = true;
+		} else if (ori == mConfiguration.ORIENTATION_PORTRAIT) {
+			isLandScape = false;
+		}
 		Display display = getWindowManager().getDefaultDisplay();
 		mPhoneHeigth = display.getHeight();
 		mPhoneWidth = display.getWidth();
@@ -226,12 +239,10 @@ SurfaceHolder.Callback
 			}
 			break;
 		case R.id.ct:
-			Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
-			int ori = mConfiguration.orientation; //获取屏幕方向
-			if (ori == mConfiguration.ORIENTATION_LANDSCAPE) {
-			    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制为竖屏
-			} else if (ori == mConfiguration.ORIENTATION_PORTRAIT) {
-			    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
+			if (isLandScape) {
+				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制为竖屏
+			}else{
+				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
 			}
 			break;
 		}
@@ -404,16 +415,28 @@ SurfaceHolder.Callback
 
 	/*
 	 * 这里可拿到当前加载视频文件的分辨率 1280x720 1920x1080 ..
-	 * 通过视频分辨率给播放界面定大小
+	 * 通过视频分辨率给播放界面适配大小
 	 */
 	@Override
 	public void onVideoSizeChanged(MediaPlayer mp, int width, int height) {
+		// 首先取得video的宽和高
 		mVideoWidth = mp.getVideoWidth();
 		mVideoHeight = mp.getVideoHeight();
-		Log.i(TAG, "width: "+width+"  height: "+height);
-		if (mVideoHeight != 0 && mVideoWidth != 0) {
-			mSurfaceView.getHolder().setFixedSize(mVideoWidth, mVideoHeight);
-			mSurfaceView.requestLayout();
+
+		if (mVideoWidth > mPhoneWidth || mVideoWidth > mPhoneHeigth) {
+			// 如果video的宽或者高超出了当前屏幕的大小，则要进行缩放
+			float wRatio = (float) mVideoWidth / (float) mPhoneWidth;
+			float hRatio = (float) mVideoHeight / (float) mPhoneHeigth;
+
+			// 选择大的一个进行缩放
+			float ratio = Math.max(wRatio, hRatio);
+			mVideoWidth = (int) Math.ceil((float) mVideoWidth / ratio);
+			mVideoHeight = (int) Math.ceil((float) mVideoHeight / ratio);
+
+			if (mVideoHeight != 0 && mVideoWidth != 0) {
+				mSurfaceView.getHolder().setFixedSize(mVideoWidth, mVideoHeight);
+				mSurfaceView.requestLayout();
+			}
 		}
 	}
 

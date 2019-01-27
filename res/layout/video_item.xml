@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical" >
+
+    <ImageView
+        android:id="@+id/video_bitmap"
+        android:layout_width="100dip"
+        android:layout_height="60dip"
+        android:layout_centerVertical="true"
+        android:layout_margin="15dip" />
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toRightOf="@+id/video_bitmap" >
+
+        <TextView
+            android:id="@+id/video_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="文件名称"
+            android:textColor="@android:color/black"
+            android:textSize="17dip" />
+
+        <TextView
+            android:id="@+id/video_size"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/video_title"
+            android:textColor="@android:color/black"
+            android:text="250MB"
+            android:textSize="14dip" />
+
+        <TextView
+            android:id="@+id/video_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/video_title"
+            android:layout_marginLeft="20dip"
+            android:layout_toRightOf="@+id/video_size"
+            android:textColor="@android:color/black"
+            android:text="1:00:01"
+            android:textSize="14dip" />
+    </RelativeLayout>
+
+</RelativeLayout>

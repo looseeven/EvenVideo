@@ -1,83 +1,18 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent" 
+    android:background="@android:color/white">
 
-    <SurfaceView
-        android:id="@+id/video"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true" />
-
-    <ImageView
-        android:id="@+id/ct"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
-        android:layout_margin="15dip"
-        android:background="@drawable/ct0"
-        android:clickable="true"
-        android:onClick="onClick" />
-
-    <RelativeLayout
-        android:id="@+id/playui"
+    <ListView
+        android:id="@+id/ls_video"
         android:layout_width="match_parent"
-        android:layout_height="50dip"
-        android:layout_alignParentBottom="true"
-        android:animateLayoutChanges="true"
-        android:orientation="horizontal" >
+        android:layout_height="match_parent" >
+    </ListView>
 
-        <ImageView
-            android:id="@+id/pp"
-            android:layout_width="wrap_content"
-            android:layout_height="34dip"
-            android:layout_centerVertical="true"
-            android:layout_marginLeft="2dip"
-            android:clickable="true"
-            android:onClick="onClick"
-            android:padding="10dip"
-            android:scaleType="center"
-            android:src="@drawable/btn_pp_normal" />
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerVertical="true"
-            android:layout_toRightOf="@+id/pp"
-            android:gravity="center"
-            android:orientation="horizontal" >
-
-            <TextView
-                android:id="@+id/currenttime"
-                android:layout_width="55dip"
-                android:layout_height="24dip"
-                android:layout_marginRight="5dip"
-                android:gravity="right|center_vertical"
-                android:text="@string/times"
-                android:textColor="@android:color/white"
-                android:textSize="14dip" />
-
-            <SeekBar
-                android:id="@+id/progress"
-                android:layout_width="215dip"
-                android:layout_height="wrap_content"
-                android:maxHeight="4.0dip"
-                android:minHeight="4.0dip"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:progressDrawable="@drawable/rr_progress"
-                android:thumb="@drawable/btn_thumb" />
-
-            <TextView
-                android:id="@+id/totaltime"
-                android:layout_width="55dip"
-                android:layout_height="24dip"
-                android:layout_marginLeft="5dip"
-                android:gravity="left|center_vertical"
-                android:text="@string/times"
-                android:textColor="@android:color/white"
-                android:textSize="14dip" />
-        </LinearLayout>
-    </RelativeLayout>
+    <include 
+        android:visibility="gone"
+        android:id="@+id/id_player"
+        layout="@layout/video_player" />
 
 </RelativeLayout>

@@ -1,11 +1,20 @@
 package com.even.video;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
+import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
@@ -18,17 +27,24 @@ import android.os.Message;
 import android.util.Log;
 import android.view.Display;
 import android.view.GestureDetector;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
+import android.provider.MediaStore;
 import android.provider.Settings.System;
 
 
@@ -40,6 +56,7 @@ SurfaceHolder.Callback
 ,OnSeekCompleteListener
 ,OnVideoSizeChangedListener
 ,OnSeekBarChangeListener
+,OnItemClickListener
 {
 	private static final int STATE_ERROR              = -1; //错误
 	private static final int STATE_IDLE               = 0; //空闲
@@ -62,11 +79,23 @@ SurfaceHolder.Callback
 	private static final int VISIBLE_PLAYUI = 0x03;
 
 	private int mCurrentPos;  //播放的位置
+
+	private SurfaceView mSurfaceView;
+	private SeekBar mSeekBar;  //进度条
+	private TextView mCurrenttime; //当前进度tx
+	private TextView mTotaltime; //总长度tx
+	private RelativeLayout mPlayui; //控制模块
+	private ImageView mCt; //大窗口
+	AudioManager mAudioManager = null;//音频管理器
+	private int mPhoneHeigth; //当前手机屏幕的高度
+	private int mPhoneWidth;//当前手机屏幕的宽度
+	private boolean isLandScape = false;
+
+	private mListAdapter adapter;
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
 	 */
-	//	String path = "/sdcard/FOOD_2560_1440.mp4";
-	String path = "/sdcard/变形金刚_1280_720.mp4";
+	private String mPath = "";
 
 	private Handler mHandler = new Handler() {
 		@Override
@@ -84,36 +113,15 @@ SurfaceHolder.Callback
 						if(position < 0) {
 							position = 0;
 						}
+
 						/*
 						 * 换算总长度 00:00格式显示
 						 */
-						int totaltime = duration / 1000;
-						int stotaltime = totaltime;
-						int mtotaltime = stotaltime / 60;
-						int htotaltime = mtotaltime / 60;
-						stotaltime %= 60;
-						mtotaltime %= 60;
-						htotaltime %= 24;
-						if(htotaltime == 0) {
-							mTotaltime.setText(String.format(Locale.US, "%d:%02d", mtotaltime, stotaltime));
-						} else {
-							mTotaltime.setText(String.format(Locale.US, "%d:%02d:%02d", htotaltime, mtotaltime, stotaltime));
-						}
+						mTotaltime.setText(chengTimeShow(duration));
 						/*
 						 * 换算当前进度 00:00格式显示
 						 */
-						int currenttime = position / 1000;
-						int scurrenttime = currenttime;
-						int mcurrenttime = scurrenttime / 60;
-						int hcurrenttime = mcurrenttime / 60;
-						scurrenttime %= 60;
-						mcurrenttime %= 60;
-						hcurrenttime %= 24;
-						if(hcurrenttime == 0) {
-							mCurrenttime.setText(String.format(Locale.US, "%d:%02d", mcurrenttime, scurrenttime));
-						} else {
-							mCurrenttime.setText(String.format(Locale.US, "%d:%02d:%02d", hcurrenttime, mcurrenttime, scurrenttime));
-						}
+						mCurrenttime.setText(chengTimeShow(position));
 						/*
 						 * 设置进度条属性
 						 */
@@ -170,15 +178,7 @@ SurfaceHolder.Callback
 		initData();
 	}
 
-	private SurfaceView mSurfaceView;
-	private SeekBar mSeekBar;  //进度条
-	private TextView mCurrenttime; //当前进度tx
-	private TextView mTotaltime; //总长度tx
-	private RelativeLayout mPlayui; //控制模块
-	private ImageView mCt; //大窗口
-	AudioManager mAudioManager = null;//音频管理器
-	private int mPhoneHeigth; //当前手机屏幕的高度
-	private int mPhoneWidth;//当前手机屏幕的宽度
+	private ListView ls_video;
 	private void initView() {
 		mVideoWidth = 0;
 		mVideoHeight = 0;
@@ -191,10 +191,14 @@ SurfaceHolder.Callback
 		mPlayui = (RelativeLayout) findViewById(R.id.playui);
 		mCt = (ImageView) findViewById(R.id.ct);
 		mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+		ls_video = (ListView)findViewById(R.id.ls_video);
+		adapter = new mListAdapter(this);
+		ls_video.setAdapter(adapter);
+		ls_video.setOnItemClickListener(this);
 	}
 
-	private boolean isLandScape = false;
 	private void initData() {
+		getList();
 		Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
 		int ori = mConfiguration.orientation; //获取屏幕方向
 		if (ori == mConfiguration.ORIENTATION_LANDSCAPE) {
@@ -205,7 +209,10 @@ SurfaceHolder.Callback
 		Display display = getWindowManager().getDefaultDisplay();
 		mPhoneHeigth = display.getHeight();
 		mPhoneWidth = display.getWidth();
-		File file = new File(path);
+	}
+
+	private void initVideo(String path){
+		File file = new File(mPath);
 		if (file.exists() && file.length() > 0) {
 			try {
 				/*
@@ -367,8 +374,8 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void onCompletion(MediaPlayer mp) {
-		mStart();
 		mMediaPlayerState = STATE_PLAYBACK_COMPLETED;
+		showList();
 	}
 
 	/*
@@ -590,6 +597,7 @@ SurfaceHolder.Callback
 	/*
 	 * 减小音量
 	 */
+	ArrayList<LVideo> mList ;  
 	private void mLessAudioVolume(){
 		mAudioManager.adjustStreamVolume(
 				AudioManager.STREAM_MUSIC,
@@ -597,5 +605,175 @@ SurfaceHolder.Callback
 				AudioManager.FLAG_SHOW_UI 
 				);
 	}
+	public List<LVideo> getList() {  
+		if (this != null) {  
+			Cursor cursor = this.getContentResolver().query(  
+					MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null,  
+					null, null);  
+			if (cursor != null) {  
+				mList = new ArrayList<LVideo>();  
+				while (cursor.moveToNext()) {  
+					int id = cursor.getInt(cursor  
+							.getColumnIndexOrThrow(MediaStore.Video.Media._ID));  
+					String title = cursor  
+							.getString(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.TITLE));  
+					String album = cursor  
+							.getString(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.ALBUM));  
+					String artist = cursor  
+							.getString(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.ARTIST));  
+					String displayName = cursor  
+							.getString(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME));  
+					String mimeType = cursor  
+							.getString(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.MIME_TYPE));  
+					String path = cursor  
+							.getString(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.DATA));  
+					int duration = cursor  
+							.getInt(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION));  
+					long size = cursor  
+							.getLong(cursor  
+									.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE));  
+					LVideo video = new LVideo();  
+					video.setName(title);  
+					video.setSize(size);  
+					video.setUrl(path);  
+					video.setDuration(duration);  
+					video.setId(id);  
+					mList.add(video);  
+				}  
+				cursor.close();  
+			}  
+		}  
+		return mList;  
+	}  
 
+	/*
+	 *  获取视频缩略图
+	 */
+	public static Bitmap getVideoThumbnail(String videoPath) {
+		  MediaMetadataRetriever media =new MediaMetadataRetriever();
+		  media.setDataSource(videoPath);
+		  Bitmap bitmap = media.getFrameAtTime();
+		  return bitmap;
+		}
+
+
+	private class mListAdapter extends BaseAdapter {
+		public mListAdapter(Context context) {
+			mContext = context;
+		}
+		@Override
+		public int getCount() {
+			if(getList() == null) {
+				return 0;
+			} 
+			return getList().size();
+		}
+
+		@Override
+		public Object getItem(int position) {
+			return null;
+		}
+
+		@Override
+		public long getItemId(int position) {
+			return position;
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			View v;
+			if(convertView == null) {
+				v = newView(parent);
+			} else {
+				v = convertView;
+			}
+			bindView(v, position, parent);
+			return v;
+		}
+		private class ViewHolder {
+			ImageView icon;
+			TextView title;
+			TextView size;
+			TextView time;
+			TextView type;
+		}
+
+		private View newView(ViewGroup parent) {
+			View v = LayoutInflater.from(mContext).inflate(R.layout.video_item, parent, false);
+			ViewHolder vh = new ViewHolder();
+			vh.icon = (ImageView) v.findViewById(R.id.video_bitmap);
+			vh.title = (TextView) v.findViewById(R.id.video_title);
+			vh.size = (TextView) v.findViewById(R.id.video_size);
+			vh.time = (TextView) v.findViewById(R.id.video_time);
+			v.setTag(vh);
+			return v;
+		}
+
+		@SuppressLint("NewApi") private void bindView(View v, int position, ViewGroup parent) {
+			ViewHolder vh = (ViewHolder) v.getTag();
+			vh.title.setText(getList().get(position).getName());
+			vh.time.setText(chengTimeShow(getList().get(position).getDuration()));
+			vh.size.setText(toMB(getList().get(position).getSize()) +"MB");
+			Drawable drawable = new BitmapDrawable(getVideoThumbnail(getList().get(position).getUrl())); 
+			vh.icon.setBackground(drawable);
+		}
+		private Context mContext;
+	}
+
+	@Override
+	public void onItemClick(AdapterView<?> arg0, View view, int position, long arg3) {
+		mPath = getList().get(position).getUrl();
+		showVideo();
+		initVideo(mPath);
+	}
+
+	private void showVideo() {
+		findViewById(R.id.id_player).setVisibility(View.VISIBLE);
+		ls_video.setVisibility(View.GONE);
+	};
+
+	private void showList(){
+		findViewById(R.id.id_player).setVisibility(View.GONE);
+		ls_video.setVisibility(View.VISIBLE);
+	}
+
+	@Override
+	public void onBackPressed() {
+		super.onBackPressed();
+		if (ls_video.getVisibility() == View.GONE) {
+			showList();
+		}else{
+			finish();
+		}
+	}
+
+	private String chengTimeShow(int l){
+		/*
+		 * 换算总长度 00:00格式显示
+		 */
+		int totaltime = l / 1000;
+		int stotaltime = totaltime;
+		int mtotaltime = stotaltime / 60;
+		int htotaltime = mtotaltime / 60;
+		stotaltime %= 60;
+		mtotaltime %= 60;
+		htotaltime %= 24;
+		if(htotaltime == 0) {
+			return String.format(Locale.US, "%d:%02d", mtotaltime, stotaltime);
+		} else {
+			return String.format(Locale.US, "%d:%02d:%02d", htotaltime, mtotaltime, stotaltime);
+		}
+	}
+
+	private int toMB(long i){
+		int mb = (int) (i/1024/1024);
+		return mb;
+	}
 }

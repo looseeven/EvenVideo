@@ -15,8 +15,6 @@
 ### 20190126B
 ###### 1.增加视频列表界面，完成第一版
 ###### 2.其他
-![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-27-234755.png)
-![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-27-234809.png)
 
 ---
 ### 20190126B

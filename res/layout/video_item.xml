@@ -26,12 +26,23 @@
             android:textSize="17dip" />
 
         <TextView
+            android:id="@+id/video_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/video_title"
+            android:text="250MB"
+            android:textColor="@android:color/black"
+            android:textSize="14dip" />
+
+        <TextView
             android:id="@+id/video_size"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/video_title"
-            android:textColor="@android:color/black"
+            android:layout_toRightOf="@+id/video_type"
             android:text="250MB"
+            android:layout_marginLeft="10dip"
+            android:textColor="@android:color/black"
             android:textSize="14dip" />
 
         <TextView
@@ -39,10 +50,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/video_title"
-            android:layout_marginLeft="20dip"
+            android:layout_marginLeft="10dip"
             android:layout_toRightOf="@+id/video_size"
-            android:textColor="@android:color/black"
             android:text="1:00:01"
+            android:textColor="@android:color/black"
             android:textSize="14dip" />
     </RelativeLayout>
 

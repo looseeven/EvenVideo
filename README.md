@@ -1,4 +1,17 @@
 # EvenVideo
+### 20190128 version 2.1
+###### 1.完善视频列表界面
+###### 2.其他
+
+---
+### 20190127
+###### 1.增加视频列表界面，完成第一版
+###### 2.其他
+![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-27-234755.png)
+![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-27-234809.png)
+![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-28-095841.png)
+
+---
 ### 20190126B
 ###### 1.适配横竖屏播放比例
 ###### 2.增加满屏状态切换

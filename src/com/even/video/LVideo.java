@@ -9,6 +9,7 @@ public class LVideo {
 	String url;  
 	int duration;  
 	int id;
+	String mediaType;
 	public String getName() {  
 		return name;  
 	}  
@@ -38,5 +39,11 @@ public class LVideo {
 	}
 	public void setId(int id) {
 		this.id = id;
+	}
+	public String getMediaType() {
+		return mediaType;
+	}
+	public void setMediaType(String mediaType) {
+		this.mediaType = mediaType;
 	}
 }  

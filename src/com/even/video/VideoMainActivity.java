@@ -605,6 +605,10 @@ SurfaceHolder.Callback
 				AudioManager.FLAG_SHOW_UI 
 				);
 	}
+	
+	/*
+	 * 获取本地视频信息 
+	 */
 	public List<LVideo> getList() {  
 		if (this != null) {  
 			Cursor cursor = this.getContentResolver().query(  
@@ -639,12 +643,17 @@ SurfaceHolder.Callback
 					long size = cursor  
 							.getLong(cursor  
 									.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE));  
+					String mediaType = null;
+    				if(mimeType.startsWith("video/")) {  
+    					mediaType = mimeType.substring(6);
+    				}
 					LVideo video = new LVideo();  
 					video.setName(title);  
 					video.setSize(size);  
 					video.setUrl(path);  
 					video.setDuration(duration);  
 					video.setId(id);  
+					video.setMediaType(mediaType);
 					mList.add(video);  
 				}  
 				cursor.close();  
@@ -664,6 +673,9 @@ SurfaceHolder.Callback
 		}
 
 
+	/*
+	 * 视频列表的加载adapter
+	 */
 	private class mListAdapter extends BaseAdapter {
 		public mListAdapter(Context context) {
 			mContext = context;
@@ -712,6 +724,7 @@ SurfaceHolder.Callback
 			vh.title = (TextView) v.findViewById(R.id.video_title);
 			vh.size = (TextView) v.findViewById(R.id.video_size);
 			vh.time = (TextView) v.findViewById(R.id.video_time);
+			vh.type = (TextView) v.findViewById(R.id.video_type);
 			v.setTag(vh);
 			return v;
 		}
@@ -721,12 +734,16 @@ SurfaceHolder.Callback
 			vh.title.setText(getList().get(position).getName());
 			vh.time.setText(chengTimeShow(getList().get(position).getDuration()));
 			vh.size.setText(toMB(getList().get(position).getSize()) +"MB");
+			vh.type.setText(getList().get(position).getMediaType());
 			Drawable drawable = new BitmapDrawable(getVideoThumbnail(getList().get(position).getUrl())); 
 			vh.icon.setBackground(drawable);
 		}
 		private Context mContext;
 	}
 
+	/*
+	 * 列表的点击事件
+	 */
 	@Override
 	public void onItemClick(AdapterView<?> arg0, View view, int position, long arg3) {
 		mPath = getList().get(position).getUrl();
@@ -734,11 +751,13 @@ SurfaceHolder.Callback
 		initVideo(mPath);
 	}
 
+	/*
+	 * 列表界面与播放界面的切换
+	 */
 	private void showVideo() {
 		findViewById(R.id.id_player).setVisibility(View.VISIBLE);
 		ls_video.setVisibility(View.GONE);
 	};
-
 	private void showList(){
 		findViewById(R.id.id_player).setVisibility(View.GONE);
 		ls_video.setVisibility(View.VISIBLE);
@@ -754,10 +773,10 @@ SurfaceHolder.Callback
 		}
 	}
 
+	/*
+	 * 换算总长度 00:00格式显示
+	 */
 	private String chengTimeShow(int l){
-		/*
-		 * 换算总长度 00:00格式显示
-		 */
 		int totaltime = l / 1000;
 		int stotaltime = totaltime;
 		int mtotaltime = stotaltime / 60;
@@ -772,6 +791,9 @@ SurfaceHolder.Callback
 		}
 	}
 
+	/*
+	 * 字节转化为MB
+	 */
 	private int toMB(long i){
 		int mb = (int) (i/1024/1024);
 		return mb;

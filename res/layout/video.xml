@@ -1,8 +1,18 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" 
-    android:background="@android:color/white">
+    android:layout_height="match_parent"
+    android:background="@android:color/white" >
+
+    <TextView
+        android:id="@+id/load_tx"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:padding="30dp"
+        android:textColor="@android:color/black"
+        android:layout_centerInParent="true"
+        android:textSize="18dip" />
 
     <ListView
         android:id="@+id/ls_video"
@@ -10,9 +20,9 @@
         android:layout_height="match_parent" >
     </ListView>
 
-    <include 
-        android:visibility="gone"
+    <include
         android:id="@+id/id_player"
-        layout="@layout/video_player" />
+        layout="@layout/video_player"
+        android:visibility="gone" />
 
 </RelativeLayout>

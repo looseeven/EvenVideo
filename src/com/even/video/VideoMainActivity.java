@@ -1,6 +1,7 @@
 package com.even.video;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -11,11 +12,13 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnPreparedListener;
@@ -57,6 +60,7 @@ SurfaceHolder.Callback
 ,OnVideoSizeChangedListener
 ,OnSeekBarChangeListener
 ,OnItemClickListener
+,OnBufferingUpdateListener
 {
 	private static final int STATE_ERROR              = -1; //错误
 	private static final int STATE_IDLE               = 0; //空闲
@@ -77,9 +81,10 @@ SurfaceHolder.Callback
 	private static final int SHOW_PROGRESS = 0x01;
 	private static final int GONE_PLAYUI = 0x02;
 	private static final int VISIBLE_PLAYUI = 0x03;
+	private static final int ADD_VIDEO_DATA = 0X05;
 
 	private int mCurrentPos;  //播放的位置
-
+	private SurfaceHolder surfaceHolder;
 	private SurfaceView mSurfaceView;
 	private SeekBar mSeekBar;  //进度条
 	private TextView mCurrenttime; //当前进度tx
@@ -90,6 +95,7 @@ SurfaceHolder.Callback
 	private int mPhoneHeigth; //当前手机屏幕的高度
 	private int mPhoneWidth;//当前手机屏幕的宽度
 	private boolean isLandScape = false;
+	private ProgressBar mPrepared_pb;
 
 	private mListAdapter adapter;
 	/*
@@ -159,6 +165,9 @@ SurfaceHolder.Callback
 					}
 					getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 					break;
+				case ADD_VIDEO_DATA:
+					ls_video.setAdapter(adapter);
+					break;
 				}
 			} catch (Exception e) {
 
@@ -178,12 +187,19 @@ SurfaceHolder.Callback
 		initData();
 	}
 
+	@Override
+	public void onConfigurationChanged(Configuration newConfig) {
+		super.onConfigurationChanged(newConfig);
+	}
+
 	private ListView ls_video;
 	private void initView() {
 		mVideoWidth = 0;
 		mVideoHeight = 0;
 		mSurfaceView = (SurfaceView) findViewById(R.id.video);
-		mSurfaceView.getHolder().addCallback(this);
+		surfaceHolder = mSurfaceView.getHolder(); // SurfaceHolder是SurfaceView的控制接口
+		surfaceHolder.addCallback(this);
+		mPrepared_pb = (ProgressBar) findViewById(R.id.prepared_pb);
 		mSeekBar = (SeekBar) findViewById(R.id.progress);
 		mSeekBar.setOnSeekBarChangeListener(this);
 		mCurrenttime = (TextView) findViewById(R.id.currenttime);
@@ -193,10 +209,23 @@ SurfaceHolder.Callback
 		mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
 		ls_video = (ListView)findViewById(R.id.ls_video);
 		adapter = new mListAdapter(this);
-		ls_video.setAdapter(adapter);
 		ls_video.setOnItemClickListener(this);
+		mHandler.sendEmptyMessage(ADD_VIDEO_DATA);
 	}
 
+	/*
+	 * 列表的点击事件
+	 */
+	@Override
+	public void onItemClick(AdapterView<?> arg0, View view, int position, long arg3) {
+		mPath = getList().get(position).getUrl();
+		mPrepared_pb .setVisibility(View.VISIBLE);
+		Log.i("XY", "点击了名字为"+mPath+"的视频  ");
+		showVideo();
+		initVideo(mPath);
+	}
+	
+	
 	private void initData() {
 		getList();
 		Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
@@ -230,6 +259,7 @@ SurfaceHolder.Callback
 				mMediaPlayer.setScreenOnWhilePlaying(true); //保持屏幕开启
 				mMediaPlayer.prepareAsync();
 				mMediaPlayerState = STATE_PREPARING;
+				Log.i("XY", "初始化了MediaPlayer");
 			} catch (Exception e) {
 				Log.i(TAG, e.toString());
 			}
@@ -239,11 +269,7 @@ SurfaceHolder.Callback
 	public void onClick(View v) {
 		switch (v.getId()) {
 		case R.id.pp:
-			if (isPlaying()) {
-				mPause();
-			}else{
-				mStart();
-			}
+			mPPause();
 			break;
 		case R.id.ct:
 			if (isLandScape) {
@@ -284,32 +310,37 @@ SurfaceHolder.Callback
 	}
 
 	/*
-	 * 开始播放
+	 * 初始
 	 */
 	private void mStart(){
 		mHandler.removeMessages(SHOW_PROGRESS);
 		mHandler.sendEmptyMessageDelayed(SHOW_PROGRESS, 250);
 		if (isInPlaybackState()) {
 			mMediaPlayer.start();
-			mSeekTo(mCurrentPos);
+			mSeekTo(0);
+		}
+	}
+
+
+	/*
+	 * 暂停
+	 */
+	private void mPPause(){
+		if (isPlaying()) {
+			mMediaPlayer.pause();
+			mMediaPlayerState = STATE_PAUSED;
+		}else{
+			mMediaPlayer.start();
 			mMediaPlayerState = STATE_PLAYING;
 		}
 	}
 
-	/*
-	 * 暂停播放
-	 */
-	private void mPause(){
-		if (isPlaying()) {
-			mMediaPlayer.pause();
-		}
-		mMediaPlayerState = STATE_PAUSED;
-	}
 
 	/*
 	 * 设置进度
 	 */
 	private void mSeekTo(int sk){
+		Log.i("XY","设置进度 ");
 		if (isInPlaybackState()) {
 			mMediaPlayer.seekTo(sk);
 		}
@@ -321,6 +352,7 @@ SurfaceHolder.Callback
 	private void Stop(){
 		mHandler.removeMessages(SHOW_PROGRESS);
 		if (mMediaPlayer != null) {
+			mMediaPlayer.setDisplay(null);
 			mMediaPlayer.stop();
 			mMediaPlayer.release();
 			mMediaPlayer = null;
@@ -339,16 +371,18 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void surfaceCreated(SurfaceHolder surfaceHolder) {
-		mMediaPlayer.setDisplay(surfaceHolder);
+		Log.i("XY", "surfaceCreated");
 	}
 
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
+		Log.i("XY", "surfaceChanged");
 	}
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
+		Log.i("XY", "surfaceDestroyed");
 	}
 
 	/*
@@ -356,7 +390,13 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void onPrepared(MediaPlayer mp) {
+		mSurfaceView.setVisibility(View.VISIBLE);
 		mMediaPlayerState = STATE_PREPARED;
+		Log.i("XY","装载流媒体完毕");
+		mPrepared_pb .setVisibility(View.GONE);
+		if (mMediaPlayer != null) {
+			mMediaPlayer.setDisplay(surfaceHolder);
+		}
 		mStart();
 	}
 
@@ -366,6 +406,7 @@ SurfaceHolder.Callback
 	@Override
 	public boolean onError(MediaPlayer mp, int what, int extra) {
 		mMediaPlayerState = STATE_ERROR;
+		Log.i("XY","播放中发生错误");
 		return false;
 	}
 
@@ -375,6 +416,8 @@ SurfaceHolder.Callback
 	@Override
 	public void onCompletion(MediaPlayer mp) {
 		mMediaPlayerState = STATE_PLAYBACK_COMPLETED;
+		Log.i("XY","媒体播放完毕");
+		mPPause();
 		showList();
 	}
 
@@ -383,19 +426,27 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void onSeekComplete(MediaPlayer mp) {
+		Log.i("XY","设置播放进度");
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
 		mHandler.sendEmptyMessageDelayed(GONE_PLAYUI, 6000);
+		if (mMediaPlayer != null) {
+			if (!mMediaPlayer.isPlaying()) {
+				mPPause();
+			}
+		}
 	}
 
 	@Override
 	protected void onPause() {
 		super.onPause();
-		if (mMediaPlayer.isPlaying()) {
-			mMediaPlayer.pause();
+		if (mMediaPlayer != null) {
+			if (mMediaPlayer.isPlaying()) {
+				mPPause();
+			}
 		}
 		mMediaPlayerState = STATE_PAUSED;
 	}
@@ -483,11 +534,8 @@ SurfaceHolder.Callback
 			/*
 			 * 双击
 			 */
-			if (isPlaying()) {
-				mPause();
-			}else {
-				mStart();
-			}
+			Log.i("XY","双击屏幕 ");
+			mPPause();
 			return true;
 		}
 
@@ -496,6 +544,7 @@ SurfaceHolder.Callback
 				float velocityY) {
 			float x = e2.getX() - e1.getX();
 			float y = e2.getY() - e1.getY();
+			Log.i("XY","滑动屏幕 ");
 			if(x > 300) { 
 				mFastforward();
 				return true;
@@ -605,7 +654,7 @@ SurfaceHolder.Callback
 				AudioManager.FLAG_SHOW_UI 
 				);
 	}
-	
+
 	/*
 	 * 获取本地视频信息 
 	 */
@@ -644,9 +693,9 @@ SurfaceHolder.Callback
 							.getLong(cursor  
 									.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE));  
 					String mediaType = null;
-    				if(mimeType.startsWith("video/")) {  
-    					mediaType = mimeType.substring(6);
-    				}
+					if(mimeType.startsWith("video/")) {  
+						mediaType = mimeType.substring(6);
+					}
 					LVideo video = new LVideo();  
 					video.setName(title);  
 					video.setSize(size);  
@@ -666,11 +715,11 @@ SurfaceHolder.Callback
 	 *  获取视频缩略图
 	 */
 	public static Bitmap getVideoThumbnail(String videoPath) {
-		  MediaMetadataRetriever media =new MediaMetadataRetriever();
-		  media.setDataSource(videoPath);
-		  Bitmap bitmap = media.getFrameAtTime();
-		  return bitmap;
-		}
+		MediaMetadataRetriever media =new MediaMetadataRetriever();
+		media.setDataSource(videoPath);
+		Bitmap bitmap = media.getFrameAtTime();
+		return bitmap;
+	}
 
 
 	/*
@@ -742,32 +791,26 @@ SurfaceHolder.Callback
 	}
 
 	/*
-	 * 列表的点击事件
-	 */
-	@Override
-	public void onItemClick(AdapterView<?> arg0, View view, int position, long arg3) {
-		mPath = getList().get(position).getUrl();
-		showVideo();
-		initVideo(mPath);
-	}
-
-	/*
 	 * 列表界面与播放界面的切换
 	 */
 	private void showVideo() {
+		Log.i("XY", "显示视频界面");
 		findViewById(R.id.id_player).setVisibility(View.VISIBLE);
-		ls_video.setVisibility(View.GONE);
+		ls_video.setVisibility(View.INVISIBLE);
 	};
+
 	private void showList(){
-		findViewById(R.id.id_player).setVisibility(View.GONE);
+		Log.i("XY", "显示视频列表界面");
+		findViewById(R.id.id_player).setVisibility(View.INVISIBLE);
 		ls_video.setVisibility(View.VISIBLE);
 	}
 
 	@Override
 	public void onBackPressed() {
-		super.onBackPressed();
-		if (ls_video.getVisibility() == View.GONE) {
+		if (ls_video.getVisibility() == View.INVISIBLE) {
+			mSurfaceView.setVisibility(View.INVISIBLE);
 			showList();
+			Stop();
 		}else{
 			finish();
 		}
@@ -797,5 +840,13 @@ SurfaceHolder.Callback
 	private int toMB(long i){
 		int mb = (int) (i/1024/1024);
 		return mb;
+	}
+
+	/*
+	 * 网络缓冲
+	 */
+	@Override
+	public void onBufferingUpdate(MediaPlayer mp, int percent) {
+		Log.i("XY", "缓冲数据： "+percent);
 	}
 }

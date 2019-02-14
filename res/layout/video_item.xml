@@ -1,38 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical" >
+    android:layout_height="80dip"
+    android:orientation="vertical" 
+    android:background="@android:color/white">
 
     <ImageView
         android:id="@+id/video_bitmap"
         android:layout_width="100dip"
-        android:layout_height="60dip"
+        android:layout_height="70dip"
+        android:layout_marginLeft="15dip"
         android:layout_centerVertical="true"
-        android:layout_margin="15dip" />
+         />
 
+    <View 
+        android:layout_width="wrap_content"
+        android:layout_height="0.4dip"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginLeft="15dip"
+        android:layout_toRightOf="@+id/video_bitmap"
+        android:background="@android:color/darker_gray"/>
+        
+    
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"
+        android:layout_marginLeft="15dip"
         android:layout_toRightOf="@+id/video_bitmap" >
 
         <TextView
             android:id="@+id/video_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="文件名称"
             android:textColor="@android:color/black"
-            android:textSize="17dip" />
+            android:textSize="14dip" />
 
         <TextView
             android:id="@+id/video_type"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_below="@+id/video_title"
-            android:text="250MB"
             android:textColor="@android:color/black"
-            android:textSize="14dip" />
+            android:textSize="12dip" />
 
         <TextView
             android:id="@+id/video_size"
@@ -40,10 +51,9 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/video_title"
             android:layout_toRightOf="@+id/video_type"
-            android:text="250MB"
             android:layout_marginLeft="10dip"
             android:textColor="@android:color/black"
-            android:textSize="14dip" />
+            android:textSize="12dip" />
 
         <TextView
             android:id="@+id/video_time"
@@ -52,9 +62,8 @@
             android:layout_below="@+id/video_title"
             android:layout_marginLeft="10dip"
             android:layout_toRightOf="@+id/video_size"
-            android:text="1:00:01"
             android:textColor="@android:color/black"
-            android:textSize="14dip" />
+            android:textSize="12dip" />
     </RelativeLayout>
 
 </RelativeLayout>

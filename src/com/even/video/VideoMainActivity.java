@@ -210,6 +210,7 @@ SurfaceHolder.Callback
 		ls_video = (ListView)findViewById(R.id.ls_video);
 		adapter = new mListAdapter(this);
 		ls_video.setOnItemClickListener(this);
+		ls_video.setDividerHeight(0);
 		mHandler.sendEmptyMessage(ADD_VIDEO_DATA);
 	}
 
@@ -374,6 +375,9 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void surfaceCreated(SurfaceHolder surfaceHolder) {
+		if (mMediaPlayer != null) {
+			mMediaPlayer.setDisplay(surfaceHolder);
+		}
 		Log.i("XY", "surfaceCreated");
 	}
 
@@ -761,13 +765,14 @@ SurfaceHolder.Callback
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
+			View v;
 			if(convertView == null) {
-				convertView = newView(parent);
-				bindView(convertView, position, parent);
+				v = newView(parent);
 			} else {
-				holder = (ViewHolder) convertView.getTag();
+				v = convertView;
 			}
-			return convertView;
+			bindView(v, position, parent);
+			return v;
 		}
 		private class ViewHolder {
 			ImageView icon;
@@ -777,9 +782,9 @@ SurfaceHolder.Callback
 			TextView type;
 		}
 
-		ViewHolder holder = new ViewHolder();
 		private View newView(ViewGroup parent) {
 			View v = LayoutInflater.from(mContext).inflate(R.layout.video_item, parent, false);
+			ViewHolder holder = new ViewHolder();
 			holder.icon = (ImageView) v.findViewById(R.id.video_bitmap);
 			holder.title = (TextView) v.findViewById(R.id.video_title);
 			holder.size = (TextView) v.findViewById(R.id.video_size);

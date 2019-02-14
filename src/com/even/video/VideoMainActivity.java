@@ -44,7 +44,10 @@ import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.provider.MediaStore;
+import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.provider.Settings.System;
 
 
@@ -153,7 +156,7 @@ SurfaceHolder.Callback
 						mPlayui.setVisibility(View.VISIBLE);
 						mPlayui.setAnimation(AnimationUtil.moveBottomToLocation());
 					}
-//					getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+					//					getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
 					break;
 				case GONE_SYSTEM:
 					if (isPlayerScape) { //如果在播放界面 全屏
@@ -186,6 +189,7 @@ SurfaceHolder.Callback
 	@Override
 	public void onConfigurationChanged(Configuration newConfig) {
 		super.onConfigurationChanged(newConfig);
+		setSurfaceView();
 	}
 
 	private void initView() {
@@ -221,8 +225,8 @@ SurfaceHolder.Callback
 		showVideo();
 		initVideo(mPath);
 	}
-	
-	
+
+
 	private void initData() {
 		getList();
 		Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
@@ -269,18 +273,32 @@ SurfaceHolder.Callback
 			mPPause();
 			break;
 		case R.id.ct:
-			if (isLandScape) {
-				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制为竖屏
-				isLandScape = false;
+			if (isopenscreen()) {
+				Toast.makeText(this, "开启重力感应时此功能无效", 0).show();
 			}else{
-				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
-				isLandScape = true;
+				if (isLandScape) {
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制为竖屏
+					isLandScape = false;
+				}else{
+					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
+					isLandScape = true;
+				}
 			}
 			setSurfaceView();
 			break;
 		}
 		mHandler.removeMessages(GONE_PLAYUI); 
 		mHandler.sendEmptyMessage(VISIBLE_PLAYUI);
+	}
+
+	int screenchange ;
+	private boolean isopenscreen(){
+		try {
+			screenchange = Settings.System.getInt(getContentResolver(), Settings.System.ACCELEROMETER_ROTATION);
+		} catch (SettingNotFoundException e) {
+			e.printStackTrace();
+		}
+		return (screenchange == 1);
 	}
 
 	/*
@@ -351,6 +369,7 @@ SurfaceHolder.Callback
 	 */
 	private void Stop(){
 		mHandler.removeMessages(SHOW_PROGRESS);
+		mSurfaceView.setVisibility(View.INVISIBLE);
 		if (mMediaPlayer != null) {
 			mMediaPlayer.setDisplay(null);
 			mMediaPlayer.stop();
@@ -420,7 +439,7 @@ SurfaceHolder.Callback
 	public void onCompletion(MediaPlayer mp) {
 		mMediaPlayerState = STATE_PLAYBACK_COMPLETED;
 		Log.i("XY","媒体播放完毕");
-		mPPause();
+		Stop();
 		showList();
 	}
 
@@ -490,23 +509,23 @@ SurfaceHolder.Callback
 		Display display = getWindowManager().getDefaultDisplay();
 		mPhoneHeigth = display.getHeight();
 		mPhoneWidth = display.getWidth();
-//		if (mVideoWidth > mPhoneWidth || mVideoWidth > mPhoneHeigth) {
-			// 如果video的宽或者高超出了当前屏幕的大小，则要进行缩放
-			float wRatio = (float) mVideoWidth / (float) mPhoneWidth;
-			float hRatio = (float) mVideoHeight / (float) mPhoneHeigth;
+		//		if (mVideoWidth > mPhoneWidth || mVideoWidth > mPhoneHeigth) {
+		// 如果video的宽或者高超出了当前屏幕的大小，则要进行缩放
+		float wRatio = (float) mVideoWidth / (float) mPhoneWidth;
+		float hRatio = (float) mVideoHeight / (float) mPhoneHeigth;
 
-			// 选择大的一个进行缩放
-			float ratio = Math.max(wRatio, hRatio);
-			mVideoWidth = (int) Math.ceil((float) mVideoWidth / ratio);
-			mVideoHeight = (int) Math.ceil((float) mVideoHeight / ratio);
+		// 选择大的一个进行缩放
+		float ratio = Math.max(wRatio, hRatio);
+		mVideoWidth = (int) Math.ceil((float) mVideoWidth / ratio);
+		mVideoHeight = (int) Math.ceil((float) mVideoHeight / ratio);
 
-			if (mVideoHeight != 0 && mVideoWidth != 0) {
-				mSurfaceView.getHolder().setFixedSize(mVideoWidth, mVideoHeight);
-				mSurfaceView.requestLayout();
-//			}
+		if (mVideoHeight != 0 && mVideoWidth != 0) {
+			mSurfaceView.getHolder().setFixedSize(mVideoWidth, mVideoHeight);
+			mSurfaceView.requestLayout();
+			//			}
 		}
 	}
-	
+
 	/*
 	 * 视频进度条
 	 */
@@ -822,7 +841,6 @@ SurfaceHolder.Callback
 	@Override
 	public void onBackPressed() {
 		if (ls_video.getVisibility() == View.INVISIBLE) {
-			mSurfaceView.setVisibility(View.INVISIBLE);
 			showList();
 			Stop();
 		}else{

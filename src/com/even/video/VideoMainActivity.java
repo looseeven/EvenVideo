@@ -190,6 +190,7 @@ SurfaceHolder.Callback
 	}
 
 	private ListView ls_video;
+	private TextView load_tx;
 	private void initView() {
 		mVideoWidth = 0;
 		mVideoHeight = 0;
@@ -201,6 +202,7 @@ SurfaceHolder.Callback
 		mSeekBar.setOnSeekBarChangeListener(this);
 		mCurrenttime = (TextView) findViewById(R.id.currenttime);
 		mTotaltime = (TextView) findViewById(R.id.totaltime);
+		load_tx = (TextView) findViewById(R.id.load_tx);
 		mPlayui = (RelativeLayout) findViewById(R.id.playui);
 		mCt = (ImageView) findViewById(R.id.ct);
 		mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
@@ -731,6 +733,9 @@ SurfaceHolder.Callback
 			if(getList() == null) {
 				return 0;
 			} 
+			if (getList().size() != 0) {
+				load_tx.setVisibility(View.GONE);
+			}
 			return getList().size();
 		}
 
@@ -746,14 +751,13 @@ SurfaceHolder.Callback
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
-			View v;
 			if(convertView == null) {
-				v = newView(parent);
+				convertView = newView(parent);
+				bindView(convertView, position, parent);
 			} else {
-				v = convertView;
+				holder = (ViewHolder) convertView.getTag();
 			}
-			bindView(v, position, parent);
-			return v;
+			return convertView;
 		}
 		private class ViewHolder {
 			ImageView icon;
@@ -763,25 +767,25 @@ SurfaceHolder.Callback
 			TextView type;
 		}
 
+		ViewHolder holder = new ViewHolder();
 		private View newView(ViewGroup parent) {
 			View v = LayoutInflater.from(mContext).inflate(R.layout.video_item, parent, false);
-			ViewHolder vh = new ViewHolder();
-			vh.icon = (ImageView) v.findViewById(R.id.video_bitmap);
-			vh.title = (TextView) v.findViewById(R.id.video_title);
-			vh.size = (TextView) v.findViewById(R.id.video_size);
-			vh.time = (TextView) v.findViewById(R.id.video_time);
-			vh.type = (TextView) v.findViewById(R.id.video_type);
-			v.setTag(vh);
+			holder.icon = (ImageView) v.findViewById(R.id.video_bitmap);
+			holder.title = (TextView) v.findViewById(R.id.video_title);
+			holder.size = (TextView) v.findViewById(R.id.video_size);
+			holder.time = (TextView) v.findViewById(R.id.video_time);
+			holder.type = (TextView) v.findViewById(R.id.video_type);
+			v.setTag(holder);
 			return v;
 		}
 
 		@SuppressLint("NewApi") private void bindView(View v, int position, ViewGroup parent) {
-			ViewHolder vh = (ViewHolder) v.getTag();
-			vh.title.setText(getList().get(position).getName());
-			vh.time.setText(chengTimeShow(getList().get(position).getDuration()));
-			vh.size.setText(toMB(getList().get(position).getSize()) +"MB");
-			vh.type.setText(getList().get(position).getMediaType());
-			Glide.with(mContext).load(getList().get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(vh.icon); //利用Glide插件加载视频缩略图
+			ViewHolder holder = (ViewHolder) v.getTag();
+			holder.title.setText(getList().get(position).getName());
+			holder.time.setText(chengTimeShow(getList().get(position).getDuration()));
+			holder.size.setText(toMB(getList().get(position).getSize()) +"MB");
+			holder.type.setText(getList().get(position).getMediaType());
+			Glide.with(mContext).load(getList().get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(holder.icon); //利用Glide插件加载视频缩略图
 		}
 		private Context mContext;
 	}

@@ -1,10 +1,10 @@
 package com.even.video;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import com.bumptech.glide.Glide;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -12,9 +12,6 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -784,12 +781,10 @@ SurfaceHolder.Callback
 			vh.time.setText(chengTimeShow(getList().get(position).getDuration()));
 			vh.size.setText(toMB(getList().get(position).getSize()) +"MB");
 			vh.type.setText(getList().get(position).getMediaType());
-			Drawable drawable = new BitmapDrawable(getVideoThumbnail(getList().get(position).getUrl())); 
-			vh.icon.setBackground(drawable);
+			Glide.with(mContext).load(getList().get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(vh.icon); //利用Glide插件加载视频缩略图
 		}
 		private Context mContext;
 	}
-
 	/*
 	 * 列表界面与播放界面的切换
 	 */

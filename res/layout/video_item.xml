@@ -9,7 +9,6 @@
         android:id="@+id/video_bitmap"
         android:layout_width="100dip"
         android:layout_height="70dip"
-        android:layout_marginLeft="15dip"
         android:layout_centerVertical="true"
          />
 

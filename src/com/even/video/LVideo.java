@@ -1,7 +1,5 @@
 package com.even.video;
 
-import java.util.Set;
-
 //电影视频的model类  
 public class LVideo {  
 	String name;  

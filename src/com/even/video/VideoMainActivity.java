@@ -92,6 +92,7 @@ SurfaceHolder.Callback
 	private int mPhoneHeigth; //当前手机屏幕的高度
 	private int mPhoneWidth;//当前手机屏幕的宽度
 	private boolean isLandScape = false;
+	private boolean isPlayerScape = false;
 	private ProgressBar mPrepared_pb;
 
 	private mListAdapter adapter;
@@ -143,7 +144,7 @@ SurfaceHolder.Callback
 					mPlayui.setAnimation(AnimationUtil.moveLocationToBottom());
 					mCt.setAnimation(AnimationUtil.moveLocationToTop());
 					mCt.setVisibility(View.GONE);
-					if (isLandScape) {
+					if (isPlayerScape) { //如果在播放界面 全屏
 						getWindow().setFlags(
 								WindowManager.LayoutParams.FLAG_FULLSCREEN, 
 								WindowManager.LayoutParams. FLAG_FULLSCREEN
@@ -273,9 +274,12 @@ SurfaceHolder.Callback
 		case R.id.ct:
 			if (isLandScape) {
 				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);//强制为竖屏
+				isLandScape = false;
 			}else{
 				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);//强制为横屏
+				isLandScape = true;
 			}
+			setSurfaceView();
 			break;
 		}
 		mHandler.removeMessages(GONE_PLAYUI); 
@@ -479,8 +483,14 @@ SurfaceHolder.Callback
 		// 首先取得video的宽和高
 		mVideoWidth = mp.getVideoWidth();
 		mVideoHeight = mp.getVideoHeight();
+		setSurfaceView();
+	}
 
-		if (mVideoWidth > mPhoneWidth || mVideoWidth > mPhoneHeigth) {
+	private void setSurfaceView(){
+		Display display = getWindowManager().getDefaultDisplay();
+		mPhoneHeigth = display.getHeight();
+		mPhoneWidth = display.getWidth();
+//		if (mVideoWidth > mPhoneWidth || mVideoWidth > mPhoneHeigth) {
 			// 如果video的宽或者高超出了当前屏幕的大小，则要进行缩放
 			float wRatio = (float) mVideoWidth / (float) mPhoneWidth;
 			float hRatio = (float) mVideoHeight / (float) mPhoneHeigth;
@@ -493,10 +503,10 @@ SurfaceHolder.Callback
 			if (mVideoHeight != 0 && mVideoWidth != 0) {
 				mSurfaceView.getHolder().setFixedSize(mVideoWidth, mVideoHeight);
 				mSurfaceView.requestLayout();
-			}
+//			}
 		}
 	}
-
+	
 	/*
 	 * 视频进度条
 	 */
@@ -796,12 +806,16 @@ SurfaceHolder.Callback
 		Log.i("XY", "显示视频界面");
 		findViewById(R.id.id_player).setVisibility(View.VISIBLE);
 		ls_video.setVisibility(View.INVISIBLE);
+		isPlayerScape = true;
+		mHandler.sendEmptyMessageDelayed(GONE_PLAYUI,6000);
 	};
 
 	private void showList(){
 		Log.i("XY", "显示视频列表界面");
+		getWindow().clearFlags( WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		findViewById(R.id.id_player).setVisibility(View.INVISIBLE);
 		ls_video.setVisibility(View.VISIBLE);
+		isPlayerScape = false;
 	}
 
 	@Override

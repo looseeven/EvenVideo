@@ -1,5 +1,5 @@
 # EvenVideo
-### 20190214
+### 20190214 version 1.2(第一版完成)
 ###### 1.修复视频缩略图加载以及滑动不流畅问题
 ###### 2.优化横竖屏切换是视频比例问题
 ###### 3.修复横屏状态下滑动事件错乱问题
@@ -15,7 +15,7 @@
 ###### 4.其他
 
 ---
-### 20190128 version 2.1
+### 20190128
 ###### 1.完善视频列表界面
 ###### 2.其他
 
@@ -24,7 +24,6 @@
 ###### 1.增加视频列表界面，完成第一版
 ###### 2.其他
 ![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-27-234755.png)
-![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-27-234809.png)
 ![master](https://github.com/yongeven/EvenVideo/blob/master/assets/device-2019-01-28-095841.png)
 
 ---

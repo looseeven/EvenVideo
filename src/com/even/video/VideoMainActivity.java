@@ -793,7 +793,7 @@ SurfaceHolder.Callback
 			ViewHolder holder = (ViewHolder) v.getTag();
 			holder.title.setText(getList().get(position).getName());
 			holder.time.setText(chengTimeShow(getList().get(position).getDuration()));
-			holder.size.setText(toMB(getList().get(position).getSize()) +"MB");
+			holder.size.setText(FileSizeUtil.formatFileSize(getList().get(position).getSize(), true)+"MB");
 			holder.type.setText(getList().get(position).getMediaType());
 			Glide.with(mContext).load(getList().get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(holder.icon); //利用Glide插件加载视频缩略图
 		}
@@ -845,14 +845,6 @@ SurfaceHolder.Callback
 		} else {
 			return String.format(Locale.US, "%d:%02d:%02d", htotaltime, mtotaltime, stotaltime);
 		}
-	}
-
-	/*
-	 * 字节转化为MB
-	 */
-	private int toMB(long i){
-		int mb = (int) (i/1024/1024);
-		return mb;
 	}
 
 	/*

@@ -66,12 +66,8 @@ SurfaceHolder.Callback
 	private static final int STATE_PLAYING            = 3; //播放中
 	private static final int STATE_PAUSED             = 4; //暂停
 	private static final int STATE_PLAYBACK_COMPLETED = 5; //播放完成
-	/*
-	 * 视频宽高
-	 */
-	private int         mVideoWidth; 
-	private int         mVideoHeight;
-
+	private int         mVideoWidth; //视频宽
+	private int         mVideoHeight;//视频高
 	private int mMediaPlayerState = STATE_IDLE;
 	private static final String TAG = AnimationUtil.class.getSimpleName();
 	private MediaPlayer mMediaPlayer = null;
@@ -79,7 +75,7 @@ SurfaceHolder.Callback
 	private static final int GONE_PLAYUI = 0x02;
 	private static final int VISIBLE_PLAYUI = 0x03;
 	private static final int ADD_VIDEO_DATA = 0X05;
-
+	private static final int GONE_SYSTEM = 0X06;
 	private int mCurrentPos;  //播放的位置
 	private SurfaceHolder surfaceHolder;
 	private SurfaceView mSurfaceView;
@@ -94,7 +90,8 @@ SurfaceHolder.Callback
 	private boolean isLandScape = false;
 	private boolean isPlayerScape = false;
 	private ProgressBar mPrepared_pb;
-
+	private ListView ls_video;
+	private TextView load_tx;
 	private mListAdapter adapter;
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
@@ -144,12 +141,7 @@ SurfaceHolder.Callback
 					mPlayui.setAnimation(AnimationUtil.moveLocationToBottom());
 					mCt.setAnimation(AnimationUtil.moveLocationToTop());
 					mCt.setVisibility(View.GONE);
-					if (isPlayerScape) { //如果在播放界面 全屏
-						getWindow().setFlags(
-								WindowManager.LayoutParams.FLAG_FULLSCREEN, 
-								WindowManager.LayoutParams. FLAG_FULLSCREEN
-								);
-					}
+					mHandler.sendEmptyMessageDelayed(GONE_SYSTEM, 2000);
 					break;
 				case VISIBLE_PLAYUI:
 					mHandler.sendEmptyMessageDelayed(GONE_PLAYUI,6000);
@@ -161,7 +153,15 @@ SurfaceHolder.Callback
 						mPlayui.setVisibility(View.VISIBLE);
 						mPlayui.setAnimation(AnimationUtil.moveBottomToLocation());
 					}
-					getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+//					getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+					break;
+				case GONE_SYSTEM:
+					if (isPlayerScape) { //如果在播放界面 全屏
+						getWindow().setFlags(
+								WindowManager.LayoutParams.FLAG_FULLSCREEN, 
+								WindowManager.LayoutParams. FLAG_FULLSCREEN
+								);
+					}
 					break;
 				case ADD_VIDEO_DATA:
 					ls_video.setAdapter(adapter);
@@ -172,8 +172,6 @@ SurfaceHolder.Callback
 			}
 		}
 	};
-
-
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -190,8 +188,6 @@ SurfaceHolder.Callback
 		super.onConfigurationChanged(newConfig);
 	}
 
-	private ListView ls_video;
-	private TextView load_tx;
 	private void initView() {
 		mVideoWidth = 0;
 		mVideoHeight = 0;
@@ -210,6 +206,7 @@ SurfaceHolder.Callback
 		ls_video = (ListView)findViewById(R.id.ls_video);
 		adapter = new mListAdapter(this);
 		ls_video.setOnItemClickListener(this);
+		ls_video.setDividerHeight(0);
 		mHandler.sendEmptyMessage(ADD_VIDEO_DATA);
 	}
 
@@ -374,6 +371,9 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void surfaceCreated(SurfaceHolder surfaceHolder) {
+		if (mMediaPlayer != null) {
+			mMediaPlayer.setDisplay(surfaceHolder);
+		}
 		Log.i("XY", "surfaceCreated");
 	}
 
@@ -761,13 +761,14 @@ SurfaceHolder.Callback
 
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
+			View v;
 			if(convertView == null) {
-				convertView = newView(parent);
-				bindView(convertView, position, parent);
+				v = newView(parent);
 			} else {
-				holder = (ViewHolder) convertView.getTag();
+				v = convertView;
 			}
-			return convertView;
+			bindView(v, position, parent);
+			return v;
 		}
 		private class ViewHolder {
 			ImageView icon;
@@ -777,9 +778,9 @@ SurfaceHolder.Callback
 			TextView type;
 		}
 
-		ViewHolder holder = new ViewHolder();
 		private View newView(ViewGroup parent) {
 			View v = LayoutInflater.from(mContext).inflate(R.layout.video_item, parent, false);
+			ViewHolder holder = new ViewHolder();
 			holder.icon = (ImageView) v.findViewById(R.id.video_bitmap);
 			holder.title = (TextView) v.findViewById(R.id.video_title);
 			holder.size = (TextView) v.findViewById(R.id.video_size);

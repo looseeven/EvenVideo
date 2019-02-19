@@ -32,6 +32,7 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -58,6 +59,7 @@ SurfaceHolder.Callback
 ,OnSeekBarChangeListener
 ,OnItemClickListener
 ,OnBufferingUpdateListener
+,OnClickListener
 {
 	private static final int STATE_ERROR              = -1; //错误
 	private static final int STATE_IDLE               = 0; //空闲
@@ -93,6 +95,7 @@ SurfaceHolder.Callback
 	private ListView ls_video;
 	private TextView load_tx;
 	private mListAdapter adapter;
+	ArrayList<LVideo> mList ; //视频信息集合
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
 	 */
@@ -164,6 +167,7 @@ SurfaceHolder.Callback
 					}
 					break;
 				case ADD_VIDEO_DATA:
+					Log.i("md", "加载数据...");
 					ls_video.setAdapter(adapter);
 					break;
 				}
@@ -179,6 +183,7 @@ SurfaceHolder.Callback
 		setContentView(R.layout.video);
 		if (savedInstanceState != null) 
 			mCurrentPos = savedInstanceState.getInt("currentPos");
+		getList();
 		initView();
 		initData();
 	}
@@ -200,6 +205,7 @@ SurfaceHolder.Callback
 		mCurrenttime = (TextView) findViewById(R.id.currenttime);
 		mTotaltime = (TextView) findViewById(R.id.totaltime);
 		load_tx = (TextView) findViewById(R.id.load_tx);
+		load_tx.setOnClickListener(this);
 		mPlayui = (RelativeLayout) findViewById(R.id.playui);
 		mCt = (ImageView) findViewById(R.id.ct);
 		mAudioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
@@ -207,7 +213,7 @@ SurfaceHolder.Callback
 		adapter = new mListAdapter(this);
 		ls_video.setOnItemClickListener(this);
 		ls_video.setDividerHeight(0);
-		mHandler.sendEmptyMessage(ADD_VIDEO_DATA);
+		mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 2000);
 	}
 
 	/*
@@ -215,7 +221,7 @@ SurfaceHolder.Callback
 	 */
 	@Override
 	public void onItemClick(AdapterView<?> arg0, View view, int position, long arg3) {
-		mPath = getList().get(position).getUrl();
+		mPath = mList.get(position).getUrl();
 		mPrepared_pb .setVisibility(View.VISIBLE);
 		Log.i("XY", "点击了名字为"+mPath+"的视频  ");
 		showVideo();
@@ -224,7 +230,6 @@ SurfaceHolder.Callback
 	
 	
 	private void initData() {
-		getList();
 		Configuration mConfiguration = this.getResources().getConfiguration(); //获取设置的配置信息
 		int ori = mConfiguration.orientation; //获取屏幕方向
 		if (ori == mConfiguration.ORIENTATION_LANDSCAPE) {
@@ -265,6 +270,13 @@ SurfaceHolder.Callback
 
 	public void onClick(View v) {
 		switch (v.getId()) {
+		case R.id.load_tx:
+			Log.i("md", "点击了扫描");
+			load_tx.setVisibility(View.VISIBLE);
+			load_tx.setText(getResources().getString(R.string.scanning));
+			getList();
+			mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 2000);
+			break;
 		case R.id.pp:
 			mPPause();
 			break;
@@ -651,11 +663,7 @@ SurfaceHolder.Callback
 				AudioManager.FX_FOCUS_NAVIGATION_UP
 				);
 	}
-
-	/*
-	 * 减小音量
-	 */
-	ArrayList<LVideo> mList ;  
+ 
 	private void mLessAudioVolume(){
 		mAudioManager.adjustStreamVolume(
 				AudioManager.STREAM_MUSIC,
@@ -664,9 +672,9 @@ SurfaceHolder.Callback
 				);
 	}
 
-	/*
+	/**
 	 * 获取本地视频信息 
-	 */
+	 **/
 	public List<LVideo> getList() {  
 		if (this != null) {  
 			Cursor cursor = this.getContentResolver().query(  
@@ -712,7 +720,8 @@ SurfaceHolder.Callback
 					video.setDuration(duration);  
 					video.setId(id);  
 					video.setMediaType(mediaType);
-					mList.add(video);  
+					mList.add(video); 
+					Log.i("md", "add: "+title);
 				}  
 				cursor.close();  
 			}  
@@ -740,13 +749,19 @@ SurfaceHolder.Callback
 		}
 		@Override
 		public int getCount() {
-			if(getList() == null) {
+			if(mList == null) {
+				Log.i("md", "mList == null");
 				return 0;
 			} 
-			if (getList().size() != 0) {
+			if (mList.size() != 0) {
+				Log.i("md", "文件数据数量不为0");
 				load_tx.setVisibility(View.GONE);
+			}else{
+				Log.i("md", "文件数据数量为0");
+				load_tx.setVisibility(View.VISIBLE);
+				load_tx.setText(getResources().getString(R.string.nofiletx));
 			}
-			return getList().size();
+			return mList.size();
 		}
 
 		@Override
@@ -792,11 +807,11 @@ SurfaceHolder.Callback
 
 		@SuppressLint("NewApi") private void bindView(View v, int position, ViewGroup parent) {
 			ViewHolder holder = (ViewHolder) v.getTag();
-			holder.title.setText(getList().get(position).getName());
-			holder.time.setText(chengTimeShow(getList().get(position).getDuration()));
-			holder.size.setText(FileSizeUtil.formatFileSize(getList().get(position).getSize(), true)+"MB");
-			holder.type.setText(getList().get(position).getMediaType());
-			Glide.with(mContext).load(getList().get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(holder.icon); //利用Glide插件加载视频缩略图
+			holder.title.setText(mList.get(position).getName());
+			holder.time.setText(chengTimeShow(mList.get(position).getDuration()));
+			holder.size.setText(FileSizeUtil.formatFileSize(mList.get(position).getSize(), true)+"MB");
+			holder.type.setText(mList.get(position).getMediaType());
+			Glide.with(mContext).load(mList.get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(holder.icon); //利用Glide插件加载视频缩略图
 		}
 		private Context mContext;
 	}

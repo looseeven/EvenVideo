@@ -15,18 +15,22 @@ public class CollectionUtils {
 	 * 查询收藏列表
 	 * @param mMusicName 需要查询的收藏列表
 	 */
-	public static ArrayList<String> getCollectionMusicList(SharedPreferences mSP,ArrayList<String> mMusicName){
+	public static ArrayList<LVideo> getCollectionMusicList(SharedPreferences mSP,ArrayList<LVideo> mMusicName){
 		try {
 			mMusicName.clear();
         	String jsonString = VideoMainActivity.mSP.getString(COLLECTIONTAG, "");
     		JSONObject json = new JSONObject(jsonString);
     		JSONArray ja1 = json.getJSONArray(COLLECTION);
     		for(int i = 0; i < ja1.length();i++){
-//    			String name = ja1.getString(i);
-    			String path = ja1.getString(i);
-    			File musicFile = new File(path);
+    			String name = ja1.getString(i);
+    			Long size = ja1.getLong(++i);
+    			String url = ja1.getString(++i);
+    			int duration = ja1.getInt(++i);
+    			int id = ja1.getInt(++i);
+    			String mediaType = ja1.getString(++i);
+    			File musicFile = new File(url);
     			if(musicFile.exists()){//判断文件是否存在
-    				mMusicName.add(path);
+    				mMusicName.add(new LVideo(name, size, url, duration, id, mediaType));
     			}
     		}
     	} catch (Exception e) {
@@ -38,14 +42,18 @@ public class CollectionUtils {
 	/**
 	 * @param mMusicName 需要保存的收藏列表
 	 */
-	public static void saveCollectionMusicList(SharedPreferences mSP,ArrayList<String> mMusicName){
+	public static void saveCollectionMusicList(SharedPreferences mSP,ArrayList<LVideo> mMusicName){
 		try {
    		 JSONObject jo = new JSONObject();
 			 JSONArray jsonarr = new JSONArray();
 			 int index = 0;
-			 for(String item2 : mMusicName){
-//				 jsonarr.put(index, item2.mName);
-				 jsonarr.put(index, item2);
+			 for(LVideo item : mMusicName){
+				 jsonarr.put(index, item.name);
+				 jsonarr.put(++index, item.size);
+				 jsonarr.put(++index, item.url);
+				 jsonarr.put(++index, item.duration);
+				 jsonarr.put(++index, item.id);
+				 jsonarr.put(++index, item.mediaType);
 				 index++;
 			 }
 			 jo.put(COLLECTION, jsonarr);
@@ -61,10 +69,10 @@ public class CollectionUtils {
 	 * @param mMusicName 需要查询所在的收藏列表
 	 * @return
 	 */
-	public static boolean itBeenCollected(Context context ,String mCurrentAPath,ArrayList<String> mMusicName){
+	public static boolean itBeenCollected(Context context ,String mCurrentAPath,ArrayList<LVideo> mMusicName){
 		try {
-			for(String mMusic : mMusicName){
-				if(mMusic.equals(mCurrentAPath)){
+			for(LVideo mMusic : mMusicName){
+				if(mMusic.url.equals(mCurrentAPath)){
 					return true;
 				}
 			}
@@ -79,7 +87,7 @@ public class CollectionUtils {
 	 * @param Path 需要收藏的歌曲路径
 	 * @param mMusicList 收藏列表
 	 */
-	public static ArrayList<String> addMusicToCollectionList(String mMusicName,ArrayList<String> mMusicList){
+	public static ArrayList<LVideo> addMusicToCollectionList(LVideo mMusicName,ArrayList<LVideo> mMusicList){
 		try {
 			mMusicList.add(mMusicName);
 		} catch (Exception e) {
@@ -93,11 +101,11 @@ public class CollectionUtils {
 	 * @param Path 需要删除的歌曲路径
 	 * @param mMusicName 收藏列表
 	 */
-	public static ArrayList<String> removeMusicFromCollectionList(String Path,ArrayList<String> mMusicName){
+	public static ArrayList<LVideo> removeMusicFromCollectionList(String Path,ArrayList<LVideo> mMusicName){
 		try {
 			int index = 0;
-			for(String mMusic : mMusicName){
-				if(mMusic.equals(Path)){
+			for(LVideo mMusic : mMusicName){
+				if(mMusic.getUrl().equals(Path)){
 					mMusicName.remove(index);
 				}
 				index ++;

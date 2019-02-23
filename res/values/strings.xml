@@ -7,5 +7,6 @@
     <string name="times">00:00</string>
     <string name="nofiletx">No File</string>
     <string name="scanning">Scanning...</string>
-
+    <string name="list_collection">收藏列表</string>
+    <string name="list_all">全部列表</string>
 </resources>

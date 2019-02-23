@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Locale;
 import com.bumptech.glide.Glide;
 import android.annotation.SuppressLint;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -29,6 +30,9 @@ import android.util.Log;
 import android.view.Display;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -99,9 +103,10 @@ SurfaceHolder.Callback
 	private ListView ls_video;
 	private TextView load_tx;
 	private mListAdapter adapter;
-	ArrayList<LVideo> mList ; //视频信息集合
+	private ArrayList<LVideo> mList ; //默认视频信息集合
 	public static SharedPreferences mSP;
-	private ArrayList<String> mMusicNameLst;
+	private ArrayList<LVideo> mCollectionMusicList; //收藏视频信息集合
+	private ArrayList<LVideo> mALLMusicList; //所有视频信息集合
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
 	 */
@@ -174,7 +179,8 @@ SurfaceHolder.Callback
 					break;
 				case ADD_VIDEO_DATA:
 					Log.i("md", "加载数据...");
-					CollectionUtils.getCollectionMusicList(mSP, mMusicNameLst);
+					mList = mALLMusicList;
+					CollectionUtils.getCollectionMusicList(mSP, mCollectionMusicList);
 					ls_video.setAdapter(adapter);
 					break;
 				}
@@ -188,6 +194,12 @@ SurfaceHolder.Callback
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.video);
+		ActionBar actionBar = getActionBar();
+		// 是否显示应用程序图标，默认为true
+		actionBar.setDisplayShowHomeEnabled(false);
+		// 是否显示应用程序标题，默认为true
+		actionBar.setDisplayShowTitleEnabled(false);
+//		actionBar.setDisplayHomeAsUpEnabled(true);
 		if (savedInstanceState != null) 
 			mCurrentPos = savedInstanceState.getInt("currentPos");
 		getList();
@@ -223,7 +235,7 @@ SurfaceHolder.Callback
 		ls_video.setDividerHeight(0);
 		mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 1000);
 		mSP = getApplicationContext().getSharedPreferences(TAG, Context.MODE_PRIVATE);
-		mMusicNameLst = new ArrayList<String>();
+		mCollectionMusicList = new ArrayList<LVideo>();
 	}
 
 	/*
@@ -250,7 +262,7 @@ SurfaceHolder.Callback
 		Display display = getWindowManager().getDefaultDisplay();
 		mPhoneHeigth = display.getHeight();
 		mPhoneWidth = display.getWidth();
-		CollectionUtils.getCollectionMusicList(mSP, mMusicNameLst);
+		CollectionUtils.getCollectionMusicList(mSP, mCollectionMusicList);
 	}
 
 	private void initVideo(String path){
@@ -489,7 +501,7 @@ SurfaceHolder.Callback
 				mPPause();
 			}
 		}
-		CollectionUtils.saveCollectionMusicList(mSP, mMusicNameLst);
+		CollectionUtils.saveCollectionMusicList(mSP, mCollectionMusicList);
 		mMediaPlayerState = STATE_PAUSED;
 	}
 
@@ -708,7 +720,7 @@ SurfaceHolder.Callback
 					MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null,  
 					null, null);  
 			if (cursor != null) {  
-				mList = new ArrayList<LVideo>();  
+				mALLMusicList = new ArrayList<LVideo>();  
 				while (cursor.moveToNext()) {  
 					int id = cursor.getInt(cursor  
 							.getColumnIndexOrThrow(MediaStore.Video.Media._ID));  
@@ -740,20 +752,20 @@ SurfaceHolder.Callback
 					if(mimeType.startsWith("video/")) {  
 						mediaType = mimeType.substring(6);
 					}
-					LVideo video = new LVideo();  
+					LVideo video = new LVideo(title, size, path, duration, id, mediaType);  
 					video.setName(title);  
 					video.setSize(size);  
 					video.setUrl(path);  
 					video.setDuration(duration);  
 					video.setId(id);  
 					video.setMediaType(mediaType);
-					mList.add(video); 
+					mALLMusicList.add(video); 
 					Log.i("md", "add: "+title);
 				}  
 				cursor.close();  
 			}  
 		}  
-		return mList;  
+		return mALLMusicList;  
 	}  
 
 	/*
@@ -845,16 +857,16 @@ SurfaceHolder.Callback
 				
 				@Override
 				public void onClick(View arg0) {
-					if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mMusicNameLst)) {
+					if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mCollectionMusicList)) {
 						holder.mCollection.getBackground().setLevel(0);
-						CollectionUtils.removeMusicFromCollectionList(mList.get(position).getUrl(), mMusicNameLst);
+						CollectionUtils.removeMusicFromCollectionList(mList.get(position).getUrl(), mCollectionMusicList);
 					}else{
 						holder.mCollection.getBackground().setLevel(1);
-						CollectionUtils.addMusicToCollectionList(mList.get(position).getUrl(), mMusicNameLst);
+						CollectionUtils.addMusicToCollectionList(mList.get(position), mCollectionMusicList);
 					}
 				}
 			});
-			if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mMusicNameLst)) {
+			if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mCollectionMusicList)) {
 				holder.mCollection.getBackground().setLevel(1);
 			}else{
 				holder.mCollection.getBackground().setLevel(0);
@@ -866,6 +878,7 @@ SurfaceHolder.Callback
 	 * 列表界面与播放界面的切换
 	 */
 	private void showVideo() {
+		getActionBar().hide();
 		Log.i("XY", "显示视频界面");
 		findViewById(R.id.id_player).setVisibility(View.VISIBLE);
 		ls_video.setVisibility(View.INVISIBLE);
@@ -875,6 +888,7 @@ SurfaceHolder.Callback
 
 	private void showList(){
 		Log.i("XY", "显示视频列表界面");
+		getActionBar().show();
 		getWindow().clearFlags( WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		findViewById(R.id.id_player).setVisibility(View.INVISIBLE);
 		ls_video.setVisibility(View.VISIBLE);
@@ -915,5 +929,23 @@ SurfaceHolder.Callback
 	@Override
 	public void onBufferingUpdate(MediaPlayer mp, int percent) {
 		Log.i("XY", "缓冲数据： "+percent);
+	}
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+	    // 为ActionBar扩展菜单项
+	    MenuInflater inflater = getMenuInflater();
+	    inflater.inflate(R.menu.actionbar_menu, menu);
+	    return super.onCreateOptionsMenu(menu);
+	}
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    int i = item.getItemId();
+	    if (i == R.id.list_all) {
+	    	mList = mALLMusicList;
+	    }else if (i == R.id.list_collection) {
+	    	mList = mCollectionMusicList;
+	    }
+	    ls_video.setAdapter(adapter);
+	    return super.onOptionsItemSelected(item);
 	}
 }

@@ -8,6 +8,15 @@ public class LVideo {
 	int duration;  
 	int id;
 	String mediaType;
+	public LVideo(String aname,long asize,String aurl,int aduration,int aid,String amediaType) {
+		name = aname;
+		size = asize;  
+		url = aurl;  
+		duration = aduration;  
+		id = aid;
+		mediaType = amediaType;
+	}
+
 	public String getName() {  
 		return name;  
 	}  

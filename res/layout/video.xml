@@ -2,14 +2,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white" >
+    android:background="@color/whitesmoke" >
 
     <ListView
         android:id="@+id/ls_video"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingLeft="10dip"
-        android:paddingRight="10dip" >
+        android:layout_height="match_parent" >
     </ListView>
 
     <include

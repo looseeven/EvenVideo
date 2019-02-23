@@ -8,6 +8,7 @@ import com.bumptech.glide.Glide;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
@@ -99,6 +100,8 @@ SurfaceHolder.Callback
 	private TextView load_tx;
 	private mListAdapter adapter;
 	ArrayList<LVideo> mList ; //视频信息集合
+	public static SharedPreferences mSP;
+	private ArrayList<String> mMusicNameLst;
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
 	 */
@@ -171,6 +174,7 @@ SurfaceHolder.Callback
 					break;
 				case ADD_VIDEO_DATA:
 					Log.i("md", "加载数据...");
+					CollectionUtils.getCollectionMusicList(mSP, mMusicNameLst);
 					ls_video.setAdapter(adapter);
 					break;
 				}
@@ -217,7 +221,9 @@ SurfaceHolder.Callback
 		adapter = new mListAdapter(this);
 		ls_video.setOnItemClickListener(this);
 		ls_video.setDividerHeight(0);
-		mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 2000);
+		mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 1000);
+		mSP = getApplicationContext().getSharedPreferences(TAG, Context.MODE_PRIVATE);
+		mMusicNameLst = new ArrayList<String>();
 	}
 
 	/*
@@ -244,6 +250,7 @@ SurfaceHolder.Callback
 		Display display = getWindowManager().getDefaultDisplay();
 		mPhoneHeigth = display.getHeight();
 		mPhoneWidth = display.getWidth();
+		CollectionUtils.getCollectionMusicList(mSP, mMusicNameLst);
 	}
 
 	private void initVideo(String path){
@@ -482,6 +489,7 @@ SurfaceHolder.Callback
 				mPPause();
 			}
 		}
+		CollectionUtils.saveCollectionMusicList(mSP, mMusicNameLst);
 		mMediaPlayerState = STATE_PAUSED;
 	}
 
@@ -810,6 +818,7 @@ SurfaceHolder.Callback
 			TextView size;
 			TextView time;
 			TextView type;
+			ImageView mCollection;
 		}
 
 		private View newView(ViewGroup parent) {
@@ -820,17 +829,36 @@ SurfaceHolder.Callback
 			holder.size = (TextView) v.findViewById(R.id.video_size);
 			holder.time = (TextView) v.findViewById(R.id.video_time);
 			holder.type = (TextView) v.findViewById(R.id.video_type);
+			holder.mCollection = (ImageView) v.findViewById(R.id.im_coll);
 			v.setTag(holder);
 			return v;
 		}
 
-		@SuppressLint("NewApi") private void bindView(View v, int position, ViewGroup parent) {
-			ViewHolder holder = (ViewHolder) v.getTag();
+		@SuppressLint("NewApi") private void bindView(View v, final int position, ViewGroup parent) {
+			final ViewHolder holder = (ViewHolder) v.getTag();
 			holder.title.setText(mList.get(position).getName());
 			holder.time.setText(chengTimeShow(mList.get(position).getDuration()));
-			holder.size.setText(FileSizeUtil.formatFileSize(mList.get(position).getSize(), true)+"MB");
+			holder.size.setText(FileSizeUtil.formatFileSize(mList.get(position).getSize(), false)+"MB");
 			holder.type.setText(mList.get(position).getMediaType());
 			Glide.with(mContext).load(mList.get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(holder.icon); //利用Glide插件加载视频缩略图
+			holder.mCollection.setOnClickListener(new OnClickListener() {
+				
+				@Override
+				public void onClick(View arg0) {
+					if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mMusicNameLst)) {
+						holder.mCollection.getBackground().setLevel(0);
+						CollectionUtils.removeMusicFromCollectionList(mList.get(position).getUrl(), mMusicNameLst);
+					}else{
+						holder.mCollection.getBackground().setLevel(1);
+						CollectionUtils.addMusicToCollectionList(mList.get(position).getUrl(), mMusicNameLst);
+					}
+				}
+			});
+			if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mMusicNameLst)) {
+				holder.mCollection.getBackground().setLevel(1);
+			}else{
+				holder.mCollection.getBackground().setLevel(0);
+			}
 		}
 		private Context mContext;
 	}

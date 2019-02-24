@@ -9,4 +9,6 @@
     <string name="scanning">Scanning...</string>
     <string name="list_collection">收藏列表</string>
     <string name="list_all">全部列表</string>
+    <string name="show_big">大图样式</string>
+    <string name="show_smal">小图样式</string>
 </resources>

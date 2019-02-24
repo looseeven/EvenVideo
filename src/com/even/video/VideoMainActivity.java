@@ -107,6 +107,7 @@ SurfaceHolder.Callback
 	public static SharedPreferences mSP;
 	private ArrayList<LVideo> mCollectionMusicList; //收藏视频信息集合
 	private ArrayList<LVideo> mALLMusicList; //所有视频信息集合
+	int showview;
 	/*
 	 * the path of the file, or the http/rtsp URL of the stream you want to play
 	 */
@@ -179,7 +180,6 @@ SurfaceHolder.Callback
 					break;
 				case ADD_VIDEO_DATA:
 					Log.i("md", "加载数据...");
-					mList = mALLMusicList;
 					CollectionUtils.getCollectionMusicList(mSP, mCollectionMusicList);
 					ls_video.setAdapter(adapter);
 					break;
@@ -199,7 +199,7 @@ SurfaceHolder.Callback
 		actionBar.setDisplayShowHomeEnabled(false);
 		// 是否显示应用程序标题，默认为true
 		actionBar.setDisplayShowTitleEnabled(false);
-//		actionBar.setDisplayHomeAsUpEnabled(true);
+		//		actionBar.setDisplayHomeAsUpEnabled(true);
 		if (savedInstanceState != null) 
 			mCurrentPos = savedInstanceState.getInt("currentPos");
 		getList();
@@ -233,7 +233,6 @@ SurfaceHolder.Callback
 		adapter = new mListAdapter(this);
 		ls_video.setOnItemClickListener(this);
 		ls_video.setDividerHeight(0);
-		mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 1000);
 		mSP = getApplicationContext().getSharedPreferences(TAG, Context.MODE_PRIVATE);
 		mCollectionMusicList = new ArrayList<LVideo>();
 	}
@@ -263,6 +262,21 @@ SurfaceHolder.Callback
 		mPhoneHeigth = display.getHeight();
 		mPhoneWidth = display.getWidth();
 		CollectionUtils.getCollectionMusicList(mSP, mCollectionMusicList);
+		changePager();
+	}
+
+	private void changePager() {
+		int pager = SharedPreferencesUtils.getIntPref(getApplicationContext(), "SHOWPAGER", "pager");
+		switch (pager) {
+		case 0:
+			mList = mALLMusicList;
+			break;
+		case 1:
+			mList = mCollectionMusicList;
+			break;
+		}
+		showview = SharedPreferencesUtils.getIntPref(getApplicationContext(), "SHOWVIEW", "view");
+		mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 1000);
 	}
 
 	private void initVideo(String path){
@@ -298,7 +312,7 @@ SurfaceHolder.Callback
 			load_tx.setVisibility(View.VISIBLE);
 			load_tx.setText(getResources().getString(R.string.scanning));
 			getList();
-			mHandler.sendEmptyMessageDelayed(ADD_VIDEO_DATA, 2000);
+			changePager();
 			break;
 		case R.id.pp:
 			mPPause();
@@ -571,12 +585,12 @@ SurfaceHolder.Callback
 
 	@Override
 	public void onStartTrackingTouch(SeekBar seekBar) {
-
 	}
 
 	@Override
 	public void onStopTrackingTouch(SeekBar seekBar) {
-
+		mHandler.removeMessages(GONE_PLAYUI); 
+		mHandler.sendEmptyMessage(VISIBLE_PLAYUI);
 	}
 
 	@Override
@@ -702,7 +716,7 @@ SurfaceHolder.Callback
 				AudioManager.FX_FOCUS_NAVIGATION_UP
 				);
 	}
- 
+
 	private void mLessAudioVolume(){
 		mAudioManager.adjustStreamVolume(
 				AudioManager.STREAM_MUSIC,
@@ -816,11 +830,16 @@ SurfaceHolder.Callback
 		@Override
 		public View getView(int position, View convertView, ViewGroup parent) {
 			View v;
-			if(convertView == null) {
-				v = newView(parent);
-			} else {
-				v = convertView;
+			if (showview == 0) {
+				v = LayoutInflater.from(mContext).inflate(R.layout.video_item_big, parent, false);
+			}else {
+				v = LayoutInflater.from(mContext).inflate(R.layout.video_item, parent, false);
 			}
+//			if(convertView == null) {
+				v = newView(parent,v);
+//			} else {
+//				v = convertView;
+//			}
 			bindView(v, position, parent);
 			return v;
 		}
@@ -833,8 +852,7 @@ SurfaceHolder.Callback
 			ImageView mCollection;
 		}
 
-		private View newView(ViewGroup parent) {
-			View v = LayoutInflater.from(mContext).inflate(R.layout.video_item, parent, false);
+		private View newView(ViewGroup parent,View v) {
 			ViewHolder holder = new ViewHolder();
 			holder.icon = (ImageView) v.findViewById(R.id.video_bitmap);
 			holder.title = (TextView) v.findViewById(R.id.video_title);
@@ -850,11 +868,11 @@ SurfaceHolder.Callback
 			final ViewHolder holder = (ViewHolder) v.getTag();
 			holder.title.setText(mList.get(position).getName());
 			holder.time.setText(chengTimeShow(mList.get(position).getDuration()));
-			holder.size.setText(FileSizeUtil.formatFileSize(mList.get(position).getSize(), false)+"MB");
+			holder.size.setText(FileSizeUtil.formatFileSize(mList.get(position).getSize(), false));
 			holder.type.setText(mList.get(position).getMediaType());
 			Glide.with(mContext).load(mList.get(position).getUrl()).placeholder(R.drawable.ic_launcher).into(holder.icon); //利用Glide插件加载视频缩略图
 			holder.mCollection.setOnClickListener(new OnClickListener() {
-				
+
 				@Override
 				public void onClick(View arg0) {
 					if (CollectionUtils.itBeenCollected(getApplicationContext(), mList.get(position).getUrl(), mCollectionMusicList)) {
@@ -932,20 +950,30 @@ SurfaceHolder.Callback
 	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-	    // 为ActionBar扩展菜单项
-	    MenuInflater inflater = getMenuInflater();
-	    inflater.inflate(R.menu.actionbar_menu, menu);
-	    return super.onCreateOptionsMenu(menu);
+		// 为ActionBar扩展菜单项
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.actionbar_menu, menu);
+		return super.onCreateOptionsMenu(menu);
 	}
+
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-	    int i = item.getItemId();
-	    if (i == R.id.list_all) {
-	    	mList = mALLMusicList;
-	    }else if (i == R.id.list_collection) {
-	    	mList = mCollectionMusicList;
-	    }
-	    ls_video.setAdapter(adapter);
-	    return super.onOptionsItemSelected(item);
+		int i = item.getItemId();
+		if (i == R.id.list_all) {
+			mList = mALLMusicList;
+			SharedPreferencesUtils.setIntPref(getApplicationContext(), "SHOWPAGER", "pager", 0);
+		}else if (i == R.id.list_collection) {
+			mList = mCollectionMusicList;
+			SharedPreferencesUtils.setIntPref(getApplicationContext(), "SHOWPAGER", "pager", 1);
+		}else if (i == R.id.show_big) {
+			SharedPreferencesUtils.setIntPref(getApplicationContext(), "SHOWVIEW", "view", 1);
+			showview = 1;
+		}else if (i == R.id.show_smal) {
+			SharedPreferencesUtils.setIntPref(getApplicationContext(), "SHOWVIEW", "view", 0);
+			showview = 0;
+		}
+		CollectionUtils.saveCollectionMusicList(mSP, mCollectionMusicList);
+		adapter.notifyDataSetChanged();
+		return super.onOptionsItemSelected(item);
 	}
 }
